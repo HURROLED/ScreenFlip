@@ -7,14 +7,14 @@ A public software that can remotely change soe Windows settings. Use on you test
 Attention! This program can damage this computer! Run only on your own computer! Run only on a test system! Use for educational, research and demonstration purposes only! It is forbidden to use this program on a computer if you do not have a direct authorization to run this program from the owner of the computer!
 
 By using this program, you agree that this program can perform any action with this computer, all information stored on it, and all devices connected to it, including, but not limited to the following actions:
-- changing the settings of the monitor or other display;
-- loading and saving data on local disks from the Internet;
-- change desktop wallpaper;
-- changing the settings of the computer mouse;
-- changing the status of open windows;
-- reading and processing information from local disks or external storage devices;
-- reading and processing properties of open windows;
-- connection to external servers via the Internet.
+- Changing the settings of the monitor or other display;
+- Loading and saving data on local disks from the Internet;
+- Change desktop wallpaper;
+- Changing the settings of the computer mouse;
+- Changing the status of open windows;
+- Reading and processing information from local disks or external storage devices;
+- Reading and processing properties of open windows;
+- Connection to external servers via the Internet.
 
 By using this program, you agree that this program can connect to the remote servers of the author of this program, which are located in Perm, Russia, and that this computer can receive remote commands from the server, and from everyone connected to this server there will be remote access to your computer as well.
 
@@ -33,13 +33,13 @@ The config file for ScreenFlip should follow this specification:
 - It has to be located in the same directory as EXE does (except some cases);
 - It has to be encoded with UTF-8 encoding;
 - First line has to contain the wallpaper image URL;
-- Second line has to meet the following format: <mode> <options>.
+- Second line has to meet the following format: `<mode> <options>`.
  
 # Modes
  
 ScreenFlip supports following modes:
 `instant` changes Windows settings immediately after execution;
-`mine <list> <of> <arguments` detects if the user has open window, which name contains one of the specified options, then changes settings;
+`mine <list> <of> <arguments>` detects if the user has open window, which name contains one of the specified options, then changes settings;
 `remote <host> <port>` connects to remote TCP server and waits for the ASCII-encoded command `ok`, then changes settings.
   
 # Build
