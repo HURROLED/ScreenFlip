@@ -1,0 +1,3 @@
+https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Example_image.svg/600px-Example_image.svg.png
+remote 127.0.0.1 54832
+This the example for config.txt.
