@@ -38,9 +38,9 @@ The config file for ScreenFlip should follow this specification:
 # Modes
  
 ScreenFlip supports following modes:
-`instant` changes Windows settings immediately after execution;
-`mine <list> <of> <arguments>` detects if the user has open window, which name contains one of the specified options, then changes settings;
-`remote <host> <port>` connects to remote TCP server and waits for the ASCII-encoded command `ok`, then changes settings.
+- `instant` changes Windows settings immediately after execution;
+- `mine <list> <of> <arguments>` detects if the user has open window, which name contains one of the specified options, then changes settings;
+- `remote <host> <port>` connects to remote TCP server and waits for the ASCII-encoded command `ok`, then changes settings.
   
 # Build
   
