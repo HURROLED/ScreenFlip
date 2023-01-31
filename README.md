@@ -40,11 +40,11 @@ The config file for ScreenFlip should follow this specification:
 ScreenFlip supports following modes:
 - `instant` changes Windows settings immediately after execution;
 - `mine <list> <of> <arguments>` detects if the user has open window, which name contains one of the specified options, then changes settings;
-- `remote <host> <port>` connects to remote TCP server and waits for the ASCII-encoded command `ok`, then changes settings.
+- `remote <host> <port>` connects to remote TCP server and waits for the ASCII-encoded command `ok`, then changes settings or reverts them. If command `delete` has been received, program  reverts all changes and exits.
   
 # Build
   
 Build with MSVC 19.29.30147 for x86, which comes with Visual Studio 2022 C/C++ package.
 Put source files to MSVC directory and run this command:
 `cl main.c sockets.c user32.lib`
-You will get a `main.exe` file in MSVC directory.
+You will get a `main.exe` executable in MSVC directory.
