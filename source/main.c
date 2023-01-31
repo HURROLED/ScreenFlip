@@ -1,4 +1,157 @@
+#include <stdio.h>
+#include <windows.h>
+#include <shlwapi.h>
 
+#pragma comment(lib, "Urlmon.lib")
+#pragma comment(lib, "Shlwapi.lib")
+
+wchar_t defaultUrl[256] = L"https://www.meme-arsenal.com/memes/9b703735887c2cfa6c6e1dad3fe35332.jpg";
+wchar_t delim[3] = L" \n";
+wchar_t URL[1024] = { 0 };
+wchar_t MODE[128] = { 0 };
+wchar_t HOST[1024] = { 0 };
+wchar_t PORT[1024] = { 0 };
+LPCWSTR TRIGGER[256] = { 0 };
+wchar_t OLD_WALLPAPER[256] = { 0 };
+wchar_t TEMP[256] = { 0 };
+wchar_t DEFAULT_HOST[256] = L"127.0.0.1";
+wchar_t DEFAULT_PORT[256] = L"54832";
+LPCWSTR DEFAULT_TRIGGER[256] = { L"notepad" };
+int OLD_WIDTH = 0;
+int OLD_HEIGHT = 0;
+
+BOOL FileExists(LPCWSTR szPath)
+{
+    DWORD dwAttrib = GetFileAttributesW(szPath);
+
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+        !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+int downloadFile(LPCWSTR path, LPCWSTR url)
+{
+    if (S_OK == URLDownloadToFileW(NULL, url, path, 0, NULL))
+    {
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+int flipDisplay(char orientation)
+{
+    DEVMODE dm;
+
+    ZeroMemory(&dm, sizeof(dm));
+    dm.dmSize = sizeof(dm);
+
+    if (0 != EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &dm))
+    {
+        if (orientation == 0 || orientation == 2)
+        {
+            if (OLD_WIDTH != 0 && OLD_HEIGHT != 0)
+            {
+                dm.dmPelsWidth = OLD_WIDTH;
+                dm.dmPelsHeight = OLD_HEIGHT;
+            }
+            else
+            {
+                dm.dmPelsWidth = 1920;
+                dm.dmPelsHeight = 1080;
+            }
+        }
+        else
+        {
+            OLD_WIDTH = dm.dmPelsWidth;
+            OLD_HEIGHT = dm.dmPelsHeight;
+
+            dm.dmPelsWidth = 600;
+            dm.dmPelsHeight = 800;
+        }
+
+        dm.dmDisplayOrientation = orientation;
+
+        long lRet = ChangeDisplaySettings(&dm, 0);
+
+        return lRet;
+    }
+
+    return -1;
+}
+
+int changeWallpaper(LPCWSTR path, LPCWSTR link)
+{
+    int errcode = -1;
+
+    errcode = SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, path, 0);
+
+    errcode -= 1;
+
+    if (errcode != 0 && link != defaultUrl)
+    {
+		errcode = setWallpaperURL(defaultUrl);
+    }
+    
+    return errcode;
+}
+
+int setWallpaperURL(LPCWSTR url)
+{
+    int errcode = -1;
+
+    GetTempPathW(256, TEMP);
+
+    wcscat_s(TEMP, 256, L"wallpaper.png");
+    wprintf(TEMP);
+
+    if (downloadFile(TEMP, url) == 0)
+    {
+        errcode = changeWallpaper(TEMP, url);
+
+    }
+    else if (url != defaultUrl)
+    {
+        errcode = setWallpaperURL(defaultUrl);
+    }
+
+    return errcode;
+}
+
+LRESULT minimizeAll()
+{
+    HANDLE hwnd = FindWindowW(L"Shell_TrayWnd", NULL);
+    LRESULT res = SendMessageW(hwnd, WM_COMMAND, (WPARAM)419, 0);
+
+    return res;
+}
+
+int loadConfig()
+{
+    int errcode = 0;
+	StrCpyW(URL, defaultUrl);
+
+    if (FileExists(L"config.txt"))
+    {
+        FILE* file = 0;
+
+        wchar_t url[1024];
+        wchar_t mode[1024];
+
+        if (_wfopen_s(&file, L"config.txt", L"r,ccs=UNICODE") == 0)
+        {
+            if (fgetws(url, 1024, file) != NULL)
+            {
+				StrCpyW(URL, url);
+
+                if (fgetws(mode, 1024, file) != NULL)
+                {
+					LPCWSTR token = NULL;
+					wchar_t buffer[1024] = { 0 };
+
+                    token = wcstok_s(mode, delim, &buffer);
+                    int count = 0;
 
                     if (StrCmpW(token, L"remote") == 0)
                     {
@@ -12,9 +165,10 @@
                             {
                                 if (count == 0)
                                 {
-									if (token == NULL || StrCmpW(token, "\n") == 0)
+									if (token == NULL || StrCmpW(token, L"\n") == 0)
 									{
-										StrCpyW(MODE, L"");
+                                        StrCpyW(HOST, DEFAULT_HOST);
+                                        StrCpyW(PORT, DEFAULT_PORT);
 										errcode = -1;
 										return -1;
 									}
@@ -23,10 +177,10 @@
                                 }
                                 else if (count == 1)
                                 {
-									if (token == NULL || StrCmpW(token, "\n") == 0)
+									if (token == NULL || StrCmpW(token, L"\n") == 0)
 									{
-										StrCpyW(MODE, L"");
-										errcode = -1;
+                                        StrCpyW(PORT, DEFAULT_PORT);
+                                        errcode = -1;
 										return -1;
 									}
 
@@ -44,9 +198,9 @@
                         {
                             token = wcstok_s(NULL, delim, &buffer);
 
-							if ((token == NULL || StrCmpW(token, "\n") == 0) && count < 1)
+							if ((token == NULL || StrCmpW(token, L"\n") == 0) && count < 1)
 							{
-								StrCpyW(MODE, L"");
+                                memcpy(TRIGGER, DEFAULT_TRIGGER, 256);
 								errcode = -1;
 								return -1;
 							}
@@ -86,8 +240,12 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
         {
             if (TRIGGER[i] == 0)
                 break;
+            
+            wchar_t trigger[256] = { 0 };
 
-            if (StrStrW(CharLowerW(text), CharLowerW(TRIGGER[i])))
+            StrCpy(trigger, TRIGGER[i]);
+
+            if (StrStrW(CharLowerW(text), CharLowerW(trigger)))
             {
                 return 0;
             }
@@ -101,6 +259,8 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
 int malicious()
 {
 	int errcode = 0;
+
+    SystemParametersInfoW(SPI_GETDESKWALLPAPER, 256, OLD_WALLPAPER, 0);
 
 	if (URL != NULL)
 	{
@@ -116,12 +276,52 @@ int malicious()
 	return errcode;
 }
 
+int deleteSelf()
+{
+    int errcode = 0;
+    errcode = revertBack();
+    exit(0);
+}
+
+int revertBack()
+{
+    int errcode = 0;
+
+    if (OLD_WALLPAPER[0] != 0)
+    {
+        SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, OLD_WALLPAPER, 0);
+    }
+    else
+    {
+        wchar_t windir[256] = { 0 };
+
+        if(GetWindowsDirectoryW(windir, 256) != 0 && windir[0] != 0)
+        {
+            wcscat_s(windir, 256, L"\\Web\\Wallpaper\\Windows\\img0.jpg");
+            SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, windir, 0);
+        }
+    }
+
+    errcode = flipDisplay(0);
+    errcode = SwapMouseButton(0);
+
+    if (TEMP[0] != 0)
+    {
+        if (FileExists(TEMP))
+        {
+            DeleteFileW(TEMP);
+        }
+    }
+
+    return errcode;
+}
+
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
 {
     if (MessageBoxW(
         0,
-        L"Ð’Ð½Ð¸Ð¼Ð°Ð½Ð¸Ðµ! Ð­Ñ‚Ð° Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð° Ð¼Ð¾Ð¶ÐµÑ‚ Ð¿Ð¾Ð²Ñ€ÐµÐ´Ð¸Ñ‚ÑŒ ÑÑ‚Ð¾Ð¹ Ð­Ð’Ðœ! Ð—Ð°Ð¿ÑƒÑÐºÐ°Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð½Ð° ÑÐ¾Ð±ÑÑ‚Ð²ÐµÐ½Ð½Ð¾Ð¹ Ð­Ð’Ðœ! Ð—Ð°Ð¿ÑƒÑÐºÐ°Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð½Ð° Ñ‚ÐµÑÑ‚Ð¾Ð²Ð¾Ð¹ ÑÐ¸ÑÑ‚ÐµÐ¼Ðµ! Ð˜ÑÐ¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Ð¾Ð±Ñ€Ð°Ð·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ñ…, Ð¸ÑÑÐ»ÐµÐ´Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒÑÐºÐ¸Ñ… Ð¸ Ð´ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¾Ð½Ð½Ñ‹Ñ… Ñ†ÐµÐ»ÑÑ…! Ð—Ð°Ð¿Ñ€ÐµÑ‰Ð°ÐµÑ‚ÑÑ Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ð½Ð¸Ðµ ÑÑ‚Ð¾Ð¹ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ñ‹ Ð½Ð° Ð­Ð’Ðœ, ÐµÑÐ»Ð¸ Ñƒ Ð’Ð°Ñ Ð½ÐµÑ‚ Ð¿Ñ€ÑÐ¼Ð¾Ð¹ ÑÐ°Ð½ÐºÑ†Ð¸Ð¸ Ð½Ð° Ð·Ð°Ð¿ÑƒÑÐº ÑÑ‚Ð¾Ð¹ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ñ‹ Ð¾Ñ‚ Ð²Ð»Ð°Ð´ÐµÐ»ÑŒÑ†Ð° Ð­Ð’Ðœ!\n\nÐÐ°Ð¶Ð¸Ð¼Ð°Ñ ÐºÐ½Ð¾Ð¿ÐºÑƒ \"Ð”Ð°\" Ð² ÑÑ‚Ð¾Ð¼ Ð¾ÐºÐ½Ðµ, Ð’Ñ‹ ÑÐ¾Ð³Ð»Ð°ÑˆÐ°ÐµÑ‚ÐµÑÑŒ Ñ Ñ‚ÐµÐ¼, Ñ‡Ñ‚Ð¾ ÑÑ‚Ð° Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð° Ð¼Ð¾Ð¶ÐµÑ‚ Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÑÑ‚ÑŒ Ð»ÑŽÐ±Ñ‹Ðµ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ Ñ ÑÑ‚Ð¾Ð¹ Ð­Ð’Ðœ, Ð²ÑÐµÐ¹ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸ÐµÐ¹, Ð½Ð° Ð½ÐµÐ¹ Ñ…Ñ€Ð°Ð½ÑÑ‰ÐµÐ¹ÑÑ, Ð¸ Ð²ÑÐµÐ¼Ð¸ ÑƒÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²Ð°Ð¼Ð¸, Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡Ñ‘Ð½Ð½Ñ‹Ð¼Ð¸ Ðº Ð½ÐµÐ¹, Ð²ÐºÐ»ÑŽÑ‡Ð°Ñ, Ð½Ð¾ Ð½Ðµ Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡Ð¸Ð²Ð°ÑÑÑŒ ÑÐ»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ð¼Ð¸ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸ÑÐ¼Ð¸:\n- Ð¸Ð·Ð¼ÐµÐ½ÐµÐ½Ð¸ÐµÐ¼ Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐº Ð¼Ð¾Ð½Ð¸Ñ‚Ð¾Ñ€Ð° Ð¸Ð»Ð¸ Ð´Ñ€ÑƒÐ³Ð¾Ð³Ð¾ Ð´Ð¸ÑÐ¿Ð»ÐµÑ;\n- Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¾Ð¹ Ð¸ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸ÐµÐ¼ Ð½Ð° Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ñ… Ð´Ð¸ÑÐºÐ°Ñ… Ð´Ð°Ð½Ð½Ñ‹Ñ… Ð¸Ð· ÑÐµÑ‚Ð¸ \"Ð˜Ð½Ñ‚ÐµÑ€Ð½ÐµÑ‚\";\n- ÑÐ¼ÐµÐ½Ð¾Ð¹ Ñ„Ð¾Ð½Ð° Ñ€Ð°Ð±Ð¾Ñ‡ÐµÐ³Ð¾ ÑÑ‚Ð¾Ð»Ð°;\n- Ð¸Ð·Ð¼ÐµÐ½ÐµÐ½Ð¸ÐµÐ¼ Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐº ÐºÐ¾Ð¼Ð¿ÑŒÑŽÑ‚ÐµÑ€Ð½Ð¾Ð¹ Ð¼Ñ‹ÑˆÐ¸;\n- Ð¸Ð·Ð¼ÐµÐ½ÐµÐ½Ð¸ÐµÐ¼ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ñ Ð¾Ñ‚ÐºÑ€Ñ‹Ñ‚Ñ‹Ñ… Ð¾ÐºÐ¾Ð½;\n- Ñ‡Ñ‚ÐµÐ½Ð¸ÐµÐ¼ Ð¸ Ð¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ¾Ð¹ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ð¸ Ñ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ñ… Ð´Ð¸ÑÐºÐ¾Ð² Ð¸Ð»Ð¸ Ð²Ð½ÐµÑˆÐ½Ð¸Ñ… Ð½Ð¾ÑÐ¸Ñ‚ÐµÐ»ÐµÐ¹ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ð¸;\n- Ñ‡Ñ‚ÐµÐ½Ð¸ÐµÐ¼ Ð¸ Ð¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ¾Ð¹ ÑÐ²Ð¾Ð¹ÑÑ‚Ð² Ð¾Ñ‚ÐºÑ€Ñ‹Ñ‚Ñ‹Ñ… Ð¾ÐºÐ¾Ð½;\n- Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸ÐµÐ¼ Ðº Ð²Ð½ÐµÑˆÐ½Ð¸Ð¼ ÑÐµÑ€Ð²ÐµÑ€Ð°Ð¼ Ð¿Ð¾ ÑÐµÑ‚Ð¸ \"Ð˜Ð½Ñ‚ÐµÑ€Ð½ÐµÑ‚\".\n\nÐÐ°Ð¶Ð¸Ð¼Ð°Ñ ÐºÐ½Ð¾Ð¿ÐºÑƒ \"Ð”Ð°\" Ð² ÑÑ‚Ð¾Ð¼ Ð¾ÐºÐ½Ðµ, Ð²Ñ‹ ÑÐ¾Ð³Ð»Ð°ÑˆÐ°ÐµÑ‚ÐµÑÑŒ Ñ Ñ‚ÐµÐ¼, Ñ‡Ñ‚Ð¾ ÑÑ‚Ð° Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð° Ð¼Ð¾Ð¶ÐµÑ‚ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡Ð°Ñ‚ÑÑ Ðº ÑƒÐ´Ð°Ð»Ñ‘Ð½Ð½Ñ‹Ð¼ ÑÐµÑ€Ð²ÐµÑ€Ð°Ð¼ Ð°Ð²Ñ‚Ð¾Ñ€Ð° ÑÑ‚Ð¾Ð¹ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ñ‹, ÐºÐ¾Ñ‚Ð¾Ñ€Ñ‹Ðµ Ñ€Ð°ÑÐ¿Ð¾Ð»Ð¾Ð¶ÐµÐ½Ñ‹ Ð² ÐŸÐµÑ€Ð¼Ð¸, Ð° Ñ‚Ð°ÐºÐ¶Ðµ Ñ Ñ‚ÐµÐ¼, Ñ‡Ñ‚Ð¾ ÑÑ‚Ð° Ð­Ð’Ðœ Ð¼Ð¾Ð¶ÐµÑ‚ Ð¿Ð¾Ð»ÑƒÑ‡Ð°Ñ‚ÑŒ ÑƒÐ´Ð°Ð»Ñ‘Ð½Ð½Ñ‹Ðµ ÐºÐ¾Ð¼Ð°Ð½Ð´Ñ‹ Ð¾Ñ‚ ÑÐµÑ€Ð²ÐµÑ€Ð°, Ð¸ Ñƒ ÐºÐ°Ð¶Ð´Ð¾Ð³Ð¾ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡Ð¸Ð²ÑˆÐµÐ³Ð¾ÑÑ Ðº ÑÑ‚Ð¾Ð¼Ñƒ ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð±ÑƒÐ´ÐµÑ‚ ÑƒÐ´Ð°Ð»Ñ‘Ð½Ð½Ñ‹Ð¹ Ð´Ð¾ÑÑ‚ÑƒÐ¿ Ðº Ð’Ð°ÑˆÐµÐ¹ Ð­Ð’Ðœ Ð² Ñ‚Ð¾Ð¼ Ñ‡Ð¸ÑÐ»Ðµ.\n\nÐÐ²Ñ‚Ð¾Ñ€ ÑÑ‚Ð¾Ð¹ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ñ‹ Ð½Ðµ Ð½ÐµÑÑ‘Ñ‚ Ð¾Ñ‚Ð²ÐµÑ‚ÑÑ‚Ð²ÐµÐ½Ð½Ð¾ÑÑ‚ÑŒ Ð·Ð° Ð»ÑŽÐ±Ð¾Ð¹ Ð²Ñ€ÐµÐ´, Ð¿Ñ€Ð¸Ñ‡Ð¸Ð½Ñ‘Ð½Ð½Ñ‹Ð¹ Ð´Ð°Ð½Ð½Ð¾Ð¹ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð¾Ð¹ ÑÑ‚Ð¾Ð¹ Ð­Ð’Ðœ, Ð´Ñ€ÑƒÐ³Ð¸Ð¼ Ð­Ð’Ðœ, Ñ„Ð¸Ð·Ð¸Ñ‡ÐµÑÐºÐ¸Ð¼ Ð¸ ÑŽÑ€Ð¸Ð´Ð¸Ñ‡ÐµÑÐºÐ¸Ð¼ Ð»Ð¸Ñ†Ð°Ð¼, ÑƒÐ½Ð¸Ñ‡Ñ‚Ð¾Ð¶ÐµÐ½Ð¸Ðµ, ÐºÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ, Ð¼Ð¾Ð´Ð¸Ñ„Ð¸ÐºÐ°Ñ†Ð¸ÑŽ, Ð±Ð»Ð¾ÐºÐ¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ Ð¸Ð»Ð¸ Ð»ÑŽÐ±Ñ‹Ðµ Ð´Ñ€ÑƒÐ³Ð¸Ðµ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ, ÑÐ¾Ð²ÐµÑ€ÑˆÑ‘Ð½Ð½Ñ‹Ðµ ÑÑ‚Ð¾Ð¹ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð¾Ð¹ Ð² Ð¾Ñ‚Ð½Ð¾ÑˆÐµÐ½Ð¸Ð¸ Ð’Ð°ÑˆÐ¸Ñ… Ð´Ð°Ð½Ð½Ñ‹Ñ….\n\nÐÐ°Ð¶Ð¸Ð¼Ð°Ñ ÐºÐ½Ð¾Ð¿ÐºÑƒ \"Ð”Ð°\" Ð² ÑÑ‚Ð¾Ð¼ Ð¾ÐºÐ½Ðµ, Ð’Ñ‹ ÑÐ¾Ð³Ð»Ð°ÑˆÐ°ÐµÑ‚ÐµÑÑŒ ÑÐ¾ Ð²ÑÐµÐ¼Ð¸ Ð²Ñ‹ÑˆÐµÐ¿ÐµÑ€ÐµÑ‡Ð¸ÑÐ»ÐµÐ½Ð½Ñ‹Ð¼Ð¸ ÑƒÑÐ»Ð¾Ð²Ð¸ÑÐ¼Ð¸ Ð¸ Ð´Ð°Ñ‘Ñ‚Ðµ Ð’Ð°ÑˆÑƒ ÑÐ°Ð½ÐºÑ†Ð¸ÑŽ Ð½Ð° Ð²ÑÐµ Ð²Ñ‹ÑˆÐµÐ¿ÐµÑ€ÐµÑ‡Ð¸ÑÐ»ÐµÐ½Ð½Ñ‹Ðµ Ð¸, Ð²Ð¾Ð¾Ð±Ñ‰Ðµ, Ð»ÑŽÐ±Ñ‹Ðµ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ Ñ Ð’Ð°ÑˆÐµÐ¹ Ð­Ð’Ðœ, Ð²Ð¾Ð·Ð»Ð°Ð³Ð°ÐµÑ‚Ðµ Ð²ÑÑŽ Ð¾Ñ‚Ð²ÐµÑ‚ÑÑ‚Ð²ÐµÐ½Ð½Ð¾ÑÑ‚ÑŒ Ð·Ð° ÑÑ‚Ð¸ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ Ð¸ÑÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð½Ð° ÑÐµÐ±Ñ, Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ð°ÐµÑ‚Ðµ, Ñ‡Ñ‚Ð¾ Ð²Ñ‹ Ð¿Ð¾Ð»Ð½Ð¾ÑÑ‚ÑŒÑŽ Ð¾Ð·Ð½Ð°ÐºÐ¾Ð¼Ð¸Ð»Ð¸ÑÑŒ Ñ ÑÑ‚Ð¸Ð¼ ÑÐ¾Ð³Ð»Ð°ÑˆÐµÐ½Ð¸ÐµÐ¼.\n\nÐÐ°Ð¶Ð¼Ð¸Ñ‚Ðµ ÐºÐ½Ð¾Ð¿ÐºÑƒ \"ÐÐµÑ‚\", Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð½ÐµÐ¼ÐµÐ´Ð»ÐµÐ½Ð½Ð¾ Ð¿Ñ€ÐµÐºÑ€Ð°Ñ‚Ð¸Ñ‚ÑŒ Ñ€Ð°Ð±Ð¾Ñ‚Ñƒ Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ñ‹.",
-        L"ÐžÑ‚ÐºÐ°Ð· Ð¾Ñ‚ Ð¾Ñ‚Ð²ÐµÑ‚ÑÑ‚Ð²ÐµÐ½Ð½Ð¾ÑÑ‚Ð¸",
+        L"Ýòà ïðîãðàììà ëèöåíçèðîâàíà ëèöåíçèåé Unlicense (http://unlicense.org/) è ÿâëÿåòñÿ îáùåñòâåííûì äîñòîÿíèåì.\nGitHub: https://github.com/HURROLED/ScreenFlip/\n\nÂíèìàíèå! Ýòà ïðîãðàììà ìîæåò ïîâðåäèòü ýòîé ÝÂÌ! Çàïóñêàòü òîëüêî íà ñîáñòâåííîé ÝÂÌ! Çàïóñêàòü òîëüêî íà òåñòîâîé ñèñòåìå! Èñïîëüçîâàòü òîëüêî â îáðàçîâàòåëüíûõ, èññëåäîâàòåëüñêèõ è äåìîíñòðàöèîííûõ öåëÿõ! Çàïðåùàåòñÿ èñïîëüçîâàíèå ýòîé ïðîãðàììû íà ÝÂÌ, åñëè ó Âàñ íåò ïðÿìîé ñàíêöèè íà çàïóñê ýòîé ïðîãðàììû îò âëàäåëüöà ÝÂÌ!\n\nÍàæèìàÿ êíîïêó \"Äà\" â ýòîì îêíå, Âû ñîãëàøàåòåñü ñ òåì, ÷òî ýòà ïðîãðàììà ìîæåò âûïîëíÿòü ëþáûå äåéñòâèÿ ñ ýòîé ÝÂÌ, âñåé èíôîðìàöèåé, íà íåé õðàíÿùåéñÿ, è âñåìè óñòðîéñòâàìè, ïîäêëþ÷¸ííûìè ê íåé, âêëþ÷àÿ, íî íå îãðàíè÷èâàÿñü ñëåäóþùèìè äåéñòâèÿìè:\n- èçìåíåíèåì íàñòðîåê ìîíèòîðà èëè äðóãîãî äèñïëåÿ;\n- çàãðóçêîé è ñîõðàíåíèåì íà ëîêàëüíûõ äèñêàõ äàííûõ èç ñåòè \"Èíòåðíåò\";\n- ñìåíîé ôîíà ðàáî÷åãî ñòîëà;\n- èçìåíåíèåì íàñòðîåê êîìïüþòåðíîé ìûøè;\n- èçìåíåíèåì ñîñòîÿíèÿ îòêðûòûõ îêîí;\n- ÷òåíèåì è îáðàáîòêîé èíôîðìàöèè ñ ëîêàëüíûõ äèñêîâ èëè âíåøíèõ íîñèòåëåé èíôîðìàöèè;\n- ÷òåíèåì è îáðàáîòêîé ñâîéñòâ îòêðûòûõ îêîí;\n- ïîäêëþ÷åíèåì ê âíåøíèì ñåðâåðàì ïî ñåòè \"Èíòåðíåò\".\n\nÍàæèìàÿ êíîïêó \"Äà\" â ýòîì îêíå, âû ñîãëàøàåòåñü ñ òåì, ÷òî ýòà ïðîãðàììà ìîæåò ïîäêëþ÷àòñÿ ê óäàë¸ííûì ñåðâåðàì àâòîðà ýòîé ïðîãðàììû, êîòîðûå ðàñïîëîæåíû â Ïåðìè, à òàêæå ñ òåì, ÷òî ýòà ÝÂÌ ìîæåò ïîëó÷àòü óäàë¸ííûå êîìàíäû îò ñåðâåðà, è ó êàæäîãî ïîäêëþ÷èâøåãîñÿ ê ýòîìó ñåðâåðó áóäåò óäàë¸ííûé äîñòóï ê Âàøåé ÝÂÌ â òîì ÷èñëå.\n\nÀâòîð ýòîé ïðîãðàììû íå íåñ¸ò îòâåòñòâåííîñòü çà ëþáîé âðåä, ïðè÷èí¸ííûé äàííîé ïðîãðàììîé ýòîé ÝÂÌ, äðóãèì ÝÂÌ, ôèçè÷åñêèì è þðèäè÷åñêèì ëèöàì, óíè÷òîæåíèå, êîïèðîâàíèå, ìîäèôèêàöèþ, áëîêèðîâàíèå èëè ëþáûå äðóãèå äåéñòâèÿ, ñîâåðø¸ííûå ýòîé ïðîãðàììîé â îòíîøåíèè Âàøèõ äàííûõ.\n\nÍàæèìàÿ êíîïêó \"Äà\" â ýòîì îêíå, Âû ñîãëàøàåòåñü ñî âñåìè âûøåïåðå÷èñëåííûìè óñëîâèÿìè è äà¸òå Âàøó ñàíêöèþ íà âñå âûøåïåðå÷èñëåííûå è, âîîáùå, ëþáûå äåéñòâèÿ ñ Âàøåé ÝÂÌ, âîçëàãàåòå âñþ îòâåòñòâåííîñòü çà ýòè äåéñòâèÿ èñêëþ÷èòåëüíî íà ñåáÿ, ïîäòâåðæäàåòå, ÷òî âû ïîëíîñòüþ îçíàêîìèëèñü ñ ýòèì ñîãëàøåíèåì.\n\nÍàæìèòå êíîïêó \"Íåò\", ÷òîáû íåìåäëåííî ïðåêðàòèòü ðàáîòó ïðîãðàììû.",
+        L"Îòêàç îò îòâåòñòâåííîñòè",
         MB_YESNO + MB_ICONWARNING
     ) == IDYES)
     {
@@ -133,4 +333,24 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         if (StrCmpW(MODE, L"remote") == 0 && HOST != 0 && PORT != 0)
         {
 			if (winsock_init() != 0)
-        
+				ret = -1;
+        }
+        else if (StrCmpW(MODE, L"mine") == 0 && TRIGGER != 0)
+        {
+            while (1)
+            {
+				ret = GetLastError();
+                if (EnumWindows(enumWindowCallback, 0) == 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (malicious() != 0)
+            ret = -1;
+
+        ret = GetLastError();
+        return ret;
+    }
+}
