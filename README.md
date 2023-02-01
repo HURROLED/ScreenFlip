@@ -31,7 +31,7 @@ This program is fully tested by me and seems to work on Windows 10 21H2 and Wind
 The config file for ScreenFlip should follow this specification:
 - It has to have 'config.txt' name;
 - It has to be located in the same directory as EXE does (except some cases);
-- It has to be STRICTLY encoded with UTF-16 LE encoding;
+- It has to be encoded with UTF-8 encoding;
 - First line has to contain the wallpaper image URL;
 - Second line has to meet the following format: `<mode> <options>`.
  
