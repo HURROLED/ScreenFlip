@@ -1,4 +1,4 @@
-#include <Winsock2.h>
+﻿#include <Winsock2.h>
 #include <Ws2tcpip.h>
 
 #include <shlwapi.h>
@@ -10,6 +10,8 @@ extern wchar_t PORT[1024];
 
 extern wchar_t DEFAULT_HOST[1024];
 extern wchar_t DEFAULT_PORT[1024];
+
+wchar_t ERR_TEXT[256] = L"Ошибка при подключении Winsock2 в методе ";
 
 int CALLED = 0;
 
@@ -34,6 +36,16 @@ struct sockaddr_in* getAddress(int *addrLen)
         errcode = WSAGetLastError();
         freeaddrinfo(result);
         WSACleanup();
+
+        if (errcode == 11001)
+        {
+            wchar_t text[256] = { 0 };
+            memcpy(text, ERR_TEXT, 256);
+            StrCatW(text, L"GetAddrInfoW (WSAHOST_NOT_FOUND): Хост не найден.");
+
+            MessageBoxW(0, text, 0, MB_ICONERROR);
+        }
+
         return errcode;
     }
 
@@ -66,6 +78,35 @@ int connect_socket(SOCKET s)
     {
         errcode = WSAGetLastError();
         WSACleanup();
+
+        if (errcode == 10061)
+        {
+            wchar_t text[256] = { 0 };
+            memcpy(text, ERR_TEXT, 256);
+            StrCatW(text, L"connect (WSAECONNREFUSED): Подключение отклонено.");
+            MessageBoxW(0, text, 0, MB_ICONERROR);
+        }
+        else if (errcode == 10049)
+        {
+            wchar_t text[256] = { 0 };
+            memcpy(text, ERR_TEXT, 256);
+            StrCatW(text, L"connect (WSAEADDRNOTAVAIL): Неверный адрес.");
+            MessageBoxW(0, text, 0, MB_ICONERROR);
+        }
+        else if (errcode == 10013)
+        {
+            wchar_t text[256] = { 0 };
+            memcpy(text, ERR_TEXT, 256);
+            StrCatW(text, L"connect (WSAEACCES): Заблокировано администратором.");
+            MessageBoxW(0, text, 0, MB_ICONERROR);
+        }
+        else if (errcode == 10060)
+        {
+            wchar_t text[256] = { 0 };
+            memcpy(text, ERR_TEXT, 256);
+            StrCatW(text, L"connect (WSAETIMEDOUT): Время истекло.");
+            MessageBoxW(0, text, 0, MB_ICONERROR);
+        }
 
         if ((StrCmpW(HOST, DEFAULT_HOST) != 0) || (StrCmpW(PORT, DEFAULT_PORT)))
         {
