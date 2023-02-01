@@ -45,6 +45,12 @@ struct sockaddr_in* getAddress(int *addrLen)
 
             MessageBoxW(0, text, 0, MB_ICONERROR);
         }
+        else
+        {
+            wchar_t errstr[256] = { 0 };
+            _itow_s(errcode, errstr, 256, 10);
+            MessageBoxW(0, errstr, 0, MB_ICONERROR);
+        }
 
         return errcode;
     }
@@ -107,6 +113,12 @@ int connect_socket(SOCKET s)
             StrCatW(text, L"connect (WSAETIMEDOUT): Время истекло.");
             MessageBoxW(0, text, 0, MB_ICONERROR);
         }
+        else
+        {
+            wchar_t errstr[256] = { 0 };
+            _itow_s(errcode, errstr, 256, 10);
+            MessageBoxW(0, errstr, 0, MB_ICONERROR);
+        }
 
         if ((StrCmpW(HOST, DEFAULT_HOST) != 0) || (StrCmpW(PORT, DEFAULT_PORT)))
         {
@@ -138,6 +150,11 @@ int connect_socket(SOCKET s)
             errcode = WSAGetLastError();
             closesocket(s);
             WSACleanup();
+
+            wchar_t errstr[256] = { 0 };
+            _itow_s(errcode, errstr, 256, 10);
+            MessageBoxW(0, errstr, 0, MB_ICONERROR);
+
             return errcode;
         }
 
